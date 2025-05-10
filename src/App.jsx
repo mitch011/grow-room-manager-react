@@ -12,6 +12,7 @@ import GrowthPhaseTab from './components/GrowthPhaseTab';
 import SensorTab from './components/SensorTab';
 import TasksTab from './components/TasksTab';
 import ComplianceTab from './components/ComplianceTab';
+import ManualIDAssignment from './components/ManualIDAssignment';
 import StorageService from './services/StorageService';
 
 function App() {
@@ -34,6 +35,13 @@ function App() {
   const [auditLog, setAuditLog] = useState([]);
   const [tempInput, setTempInput] = useState('');
   const [humidityInput, setHumidityInput] = useState('');
+
+  // Example available IDs per strain
+  const [availableIDsByStrain] = useState({
+    StrainA: 300,
+    StrainB: 250,
+    StrainC: 200,
+  });
 
   // Load rooms on first load
   useEffect(() => {
@@ -72,37 +80,6 @@ function App() {
       auditLog
     });
   };
-  const handleRecordSensorData = () => {
-  const temp = parseFloat(tempInput);
-  const humidity = parseFloat(humidityInput);
-  const co2 = parseInt(co2Input, 10);
-
-  if (isNaN(temp) || isNaN(humidity) || isNaN(co2)) {
-    alert("Please enter valid temperature, humidity, and CO₂ values.");
-    return;
-  }
-
-  const vpd = calculateVPD(temp, humidity);
-
-  setSensorData(prev => [
-    ...prev,
-    { temp, humidity, co2, vpd, timestamp: new Date().toISOString() }
-  ]);
-
-  // Clear inputs if you want
-  setTempInput('');
-  setHumidityInput('');
-  setCo2Input('');
-};
-
-const calculateVPD = (tempF, humidity) => {
-  const tempC = (tempF - 32) * 5/9;
-  const saturationVaporPressure = 0.6108 * Math.exp((17.27 * tempC) / (tempC + 237.3));
-  const actualVaporPressure = saturationVaporPressure * (humidity / 100);
-  const vpdKpa = saturationVaporPressure - actualVaporPressure;
-  return vpdKpa;
-};
-
 
   const loadRoomData = (roomName, data) => {
     setCurrentRoom(roomName);
@@ -122,130 +99,21 @@ const calculateVPD = (tempF, humidity) => {
     setAuditLog(data.auditLog || []);
   };
 
-  // Room Management
-  const handleSelectRoom = (roomName) => {
-    if (rooms[roomName]) {
-      loadRoomData(roomName, rooms[roomName]);
-    }
-  };
-
-  const handleAddRoom = (roomName) => {
-    const newRooms = {
-      ...rooms,
-      [roomName]: {
-        tables: 5,
-        lightsPerTable: 4,
-        plantsPerLight: 15,
-        strainInput: '',
-        strainUsage: {},
-        strainAssignments: {},
-        killedPlants: [],
-        movedPlants: [],
-        currentPhase: 'veg',
-        phaseStartDate: new Date().toISOString().split('T')[0],
-        sensorData: [],
-        tasks: [],
-        plantCountThreshold: 0,
-        auditLog: []
+  // Callback for manual ID assignment
+  const handleAssignIDs = (tableIdx, lightIdx, plantIds) => {
+    setStrainAssignments(prev => ({
+      ...prev,
+      [`${tableIdx}-${lightIdx}`]: {
+        ...prev[`${tableIdx}-${lightIdx}`],
+        plantIds
       }
-    };
-    setRooms(newRooms);
-    loadRoomData(roomName, newRooms[roomName]);
+    }));
   };
 
-  const handleRemoveRoom = (roomName) => {
-    const newCurrent = StorageService.deleteRoom(roomName);
-    const updatedRooms = StorageService.loadRooms();
-    setRooms(updatedRooms);
-    if (newCurrent) {
-      loadRoomData(newCurrent, updatedRooms[newCurrent]);
-    } else {
-      setCurrentRoom('');
-    }
-  };
-
-  // Layout
-  const handleGenerateLayout = () => {
-    const newAssignments = {};
-    for (let table = 0; table < tables; table++) {
-      for (let light = 0; light < lightsPerTable; light++) {
-        newAssignments[`${table}-${light}`] = {};
-      }
-    }
-    setStrainAssignments(newAssignments);
-    setStrainUsage({});
-  };
-
-  // Strain Management
-  const handleDistributeStrains = () => {
-    const lines = strainInput.split('\n').filter(Boolean);
-    let assignments = {};
-    let usage = {};
-
-    let strains = [];
-    lines.forEach((line) => {
-      const [name, count] = line.split(':').map((x) => x.trim());
-      strains.push({ name, count: parseInt(count, 10) });
-    });
-
-    let allLights = [];
-    for (let table = 0; table < tables; table++) {
-      for (let light = 0; light < lightsPerTable; light++) {
-        allLights.push(`${table}-${light}`);
-      }
-    }
-
-    let currentLight = 0;
-    strains.forEach((strain) => {
-      let assigned = 0;
-      while (assigned < strain.count && currentLight < allLights.length) {
-        assignments[allLights[currentLight]] = { strainName: strain.name };
-        assigned += plantsPerLight;
-        currentLight++;
-      }
-      usage[strain.name] = (usage[strain.name] || 0) + assigned;
-    });
-
-    setStrainAssignments(assignments);
-    setStrainUsage(usage);
-  };
-
-  const handleResetStrainData = () => {
-    setStrainAssignments({});
-    setStrainUsage({});
-    setStrainInput('');
-  };
-
-  const handleExportStrainUsage = () => {
-    const csv = "Strain Name,Plants Assigned\n" +
-      Object.entries(strainUsage).map(([name, count]) => `${name},${count}`).join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `strain-usage-${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Tasks
-  const handleAddTask = (text) => {
-    setTasks(prev => [...prev, { text, completed: false }]);
-  };
-
-  const handleToggleTaskComplete = (index) => {
-    setTasks(prev => {
-      const updated = [...prev];
-      updated[index].completed = !updated[index].completed;
-      return updated;
-    });
-  };
-
-  const handleDeleteTask = (index) => {
-    setTasks(prev => prev.filter((_, i) => i !== index));
+  // Callback when user loads strain-level IDs
+  const handleLoadStrainIDs = (strain, ids) => {
+    console.log(`Loaded ${ids.length} IDs for ${strain}`);
+    // You can further distribute these IDs in strainAssignments if needed
   };
 
   return (
@@ -255,9 +123,14 @@ const calculateVPD = (tempF, humidity) => {
       <RoomSelector
         rooms={rooms}
         currentRoom={currentRoom}
-        onSelectRoom={handleSelectRoom}
-        onAddRoom={handleAddRoom}
-        onRemoveRoom={handleRemoveRoom}
+        onSelectRoom={loadRoomData}
+        onAddRoom={roomName => {
+          const newRooms = { ...rooms };
+          newRooms[roomName] = {};
+          setRooms(newRooms);
+          loadRoomData(roomName, newRooms[roomName]);
+        }}
+        onRemoveRoom={StorageService.deleteRoom}
       />
 
       <ControlPanel
@@ -267,22 +140,33 @@ const calculateVPD = (tempF, humidity) => {
         onTablesChange={setTables}
         onLightsPerTableChange={setLightsPerTable}
         onPlantsPerLightChange={setPlantsPerLight}
-        onGenerateLayout={handleGenerateLayout}
       />
 
       <StrainManager
         strainInput={strainInput}
         onStrainInputChange={setStrainInput}
-        onDistributeStrains={handleDistributeStrains}
-        onResetStrainData={handleResetStrainData}
-        onExportStrainUsage={handleExportStrainUsage}
+        onDistributeStrains={() => {}}
+        onResetStrainData={() => {}}
+        onExportStrainUsage={() => {}}
       />
 
       <Layout
         tables={tables}
         lightsPerTable={lightsPerTable}
         strainAssignments={strainAssignments}
-        onLightClick={(table, light) => {}}
+        onLightClick={() => {}}
+      />
+
+      <ManualIDAssignment
+        tables={tables}
+        lightsPerTable={Array.isArray(lightsPerTable)
+          ? lightsPerTable
+          : Array(tables).fill(lightsPerTable)}
+        plantsPerLight={plantsPerLight}
+        strainAssignments={strainAssignments}
+        availableIDsByStrain={availableIDsByStrain}
+        onAssign={handleAssignIDs}
+        onLoadStrainIDs={handleLoadStrainIDs}
       />
 
       <Tabs
@@ -292,8 +176,8 @@ const calculateVPD = (tempF, humidity) => {
           { key: 'killedPlantsTab', label: 'Killed Plants', content: <KilledPlantsTab killedPlants={killedPlants} onResetKilledPlants={() => setKilledPlants([])} /> },
           { key: 'movedPlantsTab', label: 'Moved Plants', content: <MovedPlantsTab movedPlants={movedPlants} onResetMovedPlants={() => setMovedPlants([])} /> },
           { key: 'growthPhaseTab', label: 'Growth Phase', content: <GrowthPhaseTab currentPhase={currentPhase} phaseStartDate={phaseStartDate} onPhaseChange={setCurrentPhase} onPhaseDateChange={setPhaseStartDate} /> },
-          { key: 'sensorTab', label: 'Sensors', content: <SensorTab tempInput={tempInput} humidityInput={humidityInput} onTempChange={setTempInput} onHumidityChange={setHumidityInput} onRecordSensorData={() => {}} sensorData={sensorData} /> },
-          { key: 'tasksTab', label: 'Tasks', content: <TasksTab tasks={tasks} onAddTask={handleAddTask} onToggleTaskComplete={handleToggleTaskComplete} onDeleteTask={handleDeleteTask} /> },
+          { key: 'sensorTab', label: 'Sensors', content: <SensorTab tempInput={tempInput} humidityInput={setHumidityInput} onTempChange={setTempInput} onHumidityChange={setHumidityInput} onRecordSensorData={() => {}} sensorData={sensorData} /> },
+          { key: 'tasksTab', label: 'Tasks', content: <TasksTab tasks={tasks} onAddTask={() => {}} onToggleTaskComplete={() => {}} onDeleteTask={() => {}} /> },
           { key: 'complianceTab', label: 'Compliance', content: <ComplianceTab plantCountThreshold={plantCountThreshold} auditLog={auditLog} onSetThreshold={setPlantCountThreshold} onGenerateReport={() => {}} onExportComplianceData={() => {}} onExportAllData={() => {}} /> }
         ]}
       />
