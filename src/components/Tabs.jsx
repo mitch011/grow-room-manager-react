@@ -1,37 +1,18 @@
-import React, { useState } from 'react';
+// src/components/Tabs.jsx
+import React from "react";
 
-const Tabs = ({ tabs }) => {
-  const [activeTab, setActiveTab] = useState(tabs[0]?.key || '');
-
-  const handleTabClick = (key) => {
-    setActiveTab(key);
-  };
-
+export default function Tabs({ tabs, activeTab, onChange }) {
   return (
-    <div className="tab-container">
-      <div className="tab-buttons">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            className={`tab-button ${activeTab === tab.key ? 'active' : ''}`}
-            onClick={() => handleTabClick(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {tabs.map((tab) => (
-        <div
-          key={tab.key}
-          id={tab.key}
-          className={`tab-content ${activeTab === tab.key ? 'active' : ''}`}
+    <div className="tabs">
+      {tabs.map((tab, idx) => (
+        <button
+          key={tab.id ?? idx}                    // ← unique key prop
+          className={tab === activeTab ? "active" : ""}
+          onClick={() => onChange(tab)}
         >
-          {tab.content}
-        </div>
+          {tab.label ?? tab}
+        </button>
       ))}
     </div>
   );
-};
-
-export default Tabs;
+}
