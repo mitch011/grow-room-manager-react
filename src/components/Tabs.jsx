@@ -1,16 +1,15 @@
-// src/components/Tabs.jsx
-import React from "react";
+import React from 'react';
 
 export default function Tabs({ tabs, activeTab, onChange }) {
   return (
     <div className="tabs">
-      {tabs.map((tab, idx) => (
+      {tabs.map((tab) => (
         <button
-          key={tab.id ?? idx}                    // ← unique key prop
-          className={tab === activeTab ? "active" : ""}
-          onClick={() => onChange(tab)}
+          key={tab.id}
+          className={tab.id === activeTab ? 'active' : ''}
+          onClick={() => onChange(tab.id)}
         >
-          {tab.label ?? tab}
+          {tab.label}
         </button>
       ))}
     </div>
