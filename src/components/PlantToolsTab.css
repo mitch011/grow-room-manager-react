@@ -1,0 +1,61 @@
+/* Plant Tools Tab */
+.plant-tools-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1em;
+}
+.plant-tools-header input,
+.plant-tools-header button {
+  margin-right: 0.5em;
+}
+
+/* Show All IDs modal */ 
+.show-ids-modal .modal-content {
+  width: 95%;
+  max-width: 1000px;
+  padding: 2em;
+}
+.show-ids-modal h3 {
+  margin-top: 0;
+  color: var(--accent);
+}
+.show-ids-modal .filter-container {
+  display: flex;
+  gap: 1em;
+  margin-bottom: 1em;
+}
+.show-ids-modal table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.show-ids-modal th,
+.show-ids-modal td {
+  padding: 0.75em 1em;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.show-ids-modal th {
+  background: var(--bg);
+  color: var(--accent);
+  text-align: left;
+}
+.show-ids-modal tr:nth-child(even) {
+  background: var(--bg-alt);
+}
+
+/* Bulk action buttons */
+.bulk-actions {
+  display: flex;
+  gap: 1em;
+  margin-bottom: 1em;
+}
+.bulk-actions button {
+  background: var(--warning);
+}
+.bulk-actions button.delete {
+  background: var(--danger);
+}
+.bulk-actions button:hover {
+  opacity: 0.9;
+}
